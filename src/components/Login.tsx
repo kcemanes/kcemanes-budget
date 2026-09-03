@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
+import ThemeToggle from './ThemeToggle'
 
 type Mode = 'signin' | 'signup'
 
@@ -44,7 +45,10 @@ function Login() {
   }
 
   return (
-    <div className="flex flex-1 items-center justify-center bg-linear-to-b from-accent-soft to-ground to-60% px-4 py-8">
+    <div className="relative flex flex-1 items-center justify-center bg-linear-to-b from-accent-soft to-ground to-60% px-4 py-8">
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
       <form
         className="flex w-full max-w-[380px] flex-col gap-2 rounded-xl border border-line bg-surface p-8 shadow-card"
         onSubmit={handleSubmit}

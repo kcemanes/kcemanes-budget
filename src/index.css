@@ -1,5 +1,10 @@
 @import 'tailwindcss';
 
+/* Tailwind's stock `dark:` keys off prefers-color-scheme, which would ignore
+   an explicit choice and disagree with the palette below. Point it at the same
+   attribute instead, so `dark:` and the tokens can never drift apart. */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
 /* Palette: cool slate ground, emerald primary, rose/amber for money states.
    Values marked "derived" are not in the source palette; they exist because
    the given tones are too light to carry small text.
@@ -23,6 +28,7 @@
   --color-accent-strong: #047857; /* emerald-700 — button hover + accent text, 5.48:1 */
   --color-accent-mid: #10b981; /* derived: emerald-500, bars and focus edges */
   --color-accent-soft: #d1fae5; /* derived: emerald-100, tints, rings, row hover */
+  --color-on-accent: #fff; /* text/icons on an accent fill; inverts in dark */
 
   /* Money states. The plain tones are for amounts, chips and bars; the
      -strong pairs are darkened for legibility at body size. */
@@ -46,10 +52,57 @@
     rgba(15, 23, 42, 0.08) 0 10px 15px -3px, rgba(15, 23, 42, 0.05) 0 4px 6px -2px;
 }
 
+/* Dark palette. Only the tokens whose role changes are restated; everything
+   keyed off them — every utility, every @apply below — follows.
+
+   The invariant carried over from the light palette is that a -strong token is
+   the text-safe member of its hue. In light that means darker; here it means
+   lighter. Ratios are against --color-ground (#0b1220) / --color-surface
+   (#151f33), and every pairing the app actually renders clears AA 4.5:1. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --color-ground: #0b1220; /* derived: below slate-900, so surface can lift off it */
+  --color-surface: #151f33; /* derived: 1.14:1 over ground — cards read as raised */
+  --color-ink: #e8eef7; /* derived: 16.05:1 on ground, 14.11:1 on surface */
+  --color-muted: #94a3b8; /* slate-400 — 7.30:1 on ground, 6.42:1 on surface */
+
+  /* 1.46:1 on ground, 1.28:1 on surface. Light's hairline sits at 1.18/1.23;
+     dark grounds flatten edges, so this is nudged up to read the same weight. */
+  --color-line: #26324a; /* derived */
+
+  --color-accent: #10b981; /* emerald-500 — fill; on-accent over it is 7.38:1 */
+  --color-accent-strong: #34d399; /* emerald-400 — accent text 9.74:1, and button hover */
+  /* Light splits mid from accent only because emerald-600 is too dark for a
+     2px bar on white. That problem is gone here, so mid collapses onto accent. */
+  --color-accent-mid: #10b981; /* emerald-500 — bars and focus edges */
+  --color-accent-soft: rgba(16, 185, 129, 0.18); /* derived: tint, ring, row hover */
+  --color-on-accent: #0b1220; /* the ground tone: 7.38:1 on accent, 9.74:1 on hover */
+
+  --color-income: #10b981; /* emerald-500 */
+  --color-income-strong: #34d399; /* emerald-400 — 9.74:1 */
+  --color-overspend: #fb7185; /* rose-400 — bars and tracks, 6.96:1 */
+  --color-overspend-strong: #fda4af; /* rose-300 — 9.90:1, and 7.49:1 on a hovered row */
+
+  /* The -soft tints stay translucent so they still composite over both ground
+     and surface; rose is opened up slightly to register on a dark ground. */
+  --color-notice: #fbbf24; /* amber-400 — never used for text */
+  --color-notice-strong: #fcd34d; /* amber-300 — 9.17:1 on the tint, 7.95:1 over surface */
+  --color-notice-soft: rgba(245, 158, 11, 0.2);
+  --color-danger: #fda4af; /* tracks overspend-strong, 8.55:1 on the tint */
+  --color-danger-soft: rgba(244, 63, 94, 0.16);
+
+  /* A slate shadow disappears on a dark ground; near-black and deeper reads
+     as elevation instead. */
+  --shadow-card:
+    rgba(0, 0, 0, 0.5) 0 10px 15px -3px, rgba(0, 0, 0, 0.4) 0 4px 6px -2px;
+}
+
 @layer base {
   /* All sizing below is rem-based and was authored against an 18px root,
      so the root size stays as it was. */
   html {
+    color-scheme: light;
     font-size: 18px;
 
     @media (width <= 1024px) {
@@ -65,7 +118,6 @@
     letter-spacing: 0.18px;
     color: var(--color-muted);
     background: var(--color-ground);
-    color-scheme: light;
     font-synthesis: none;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
@@ -97,7 +149,7 @@
   }
 
   .btn-primary {
-    @apply cursor-pointer rounded-control border border-accent bg-accent px-4 py-2 text-sm font-semibold text-white;
+    @apply cursor-pointer rounded-control border border-accent bg-accent px-4 py-2 text-sm font-semibold text-on-accent;
     @apply enabled:hover:border-accent-strong enabled:hover:bg-accent-strong;
     @apply disabled:cursor-default disabled:opacity-60;
   }

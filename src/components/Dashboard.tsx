@@ -3,8 +3,11 @@ import type { Session } from '@supabase/supabase-js'
 import CategorySummary from './CategorySummary'
 import ExpenseForm from './ExpenseForm'
 import ExpenseList from './ExpenseList'
+import ThemeToggle from './ThemeToggle'
 import { listCategories, listExpenses } from '../lib/api'
-import { formatMoney, formatMonth, monthBounds } from '../lib/format'
+import { CURRENCIES, useCurrency } from '../lib/currency'
+import type { CurrencyCode } from '../lib/currency'
+import { formatMonth, monthBounds } from '../lib/format'
 import { supabase } from '../lib/supabase'
 import type { Category, Expense } from '../types'
 
@@ -15,6 +18,7 @@ const STEP =
   'btn-quiet h-9 w-9 rounded-full p-0 text-xl leading-none disabled:opacity-35'
 
 function Dashboard({ session }: { session: Session }) {
+  const { currency, setCurrency, formatMoney } = useCurrency()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth())
   const [categories, setCategories] = useState<Category[]>([])
@@ -78,6 +82,22 @@ function Dashboard({ session }: { session: Session }) {
         </h1>
         <div className="flex items-center gap-3 text-sm">
           <span className="text-muted">{session.user.email}</span>
+          <label htmlFor="currency" className="sr-only">
+            Currency
+          </label>
+          <select
+            id="currency"
+            className="input py-1.5"
+            value={currency}
+            onChange={(e) => setCurrency(e.target.value as CurrencyCode)}
+          >
+            {CURRENCIES.map(({ code, label }) => (
+              <option key={code} value={code}>
+                {label}
+              </option>
+            ))}
+          </select>
+          <ThemeToggle />
           <button
             type="button"
             className="btn-quiet"

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { deleteExpense } from '../lib/api'
-import { formatDay, formatMoney } from '../lib/format'
+import { useCurrency } from '../lib/currency'
+import { formatDay } from '../lib/format'
 import type { Category, Expense } from '../types'
 
 type Props = {
@@ -13,6 +14,7 @@ const TH = 'border-b border-line px-2.5 py-2 text-left text-xs font-semibold upp
 const TD = 'border-b border-line px-2.5 py-2.5 text-ink'
 
 function ExpenseList({ expenses, categories, onChanged }: Props) {
+  const { formatMoney } = useCurrency()
   const [removing, setRemoving] = useState<string | null>(null)
   const names = new Map(categories.map((c) => [c.id, c.name]))
 

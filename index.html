@@ -5,6 +5,26 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Budget</title>
+    <script>
+      // Stamps the theme before the first paint. Doing this from a React
+      // effect instead would show one frame of the light palette on every
+      // load. Mirrors storedTheme()/resolveTheme() in src/lib/theme.ts —
+      // the storage key and the attribute are shared, so change both together.
+      ;(function () {
+        try {
+          var saved = localStorage.getItem('budget.theme')
+          var choice = saved === 'light' || saved === 'dark' ? saved : 'system'
+          var dark =
+            choice === 'dark' ||
+            (choice === 'system' &&
+              matchMedia('(prefers-color-scheme: dark)').matches)
+          document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+        } catch (e) {
+          // Storage blocked. The light palette in CSS stands, and the app
+          // still re-applies the theme once React mounts.
+        }
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

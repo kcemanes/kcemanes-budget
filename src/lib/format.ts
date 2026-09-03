@@ -1,11 +1,6 @@
-// Change these two if you budget in another currency or locale.
+// Change this if you want dates in another locale.
+// Money formatting lives in ./currency, which the user picks at runtime.
 const LOCALE = 'en-CA'
-const CURRENCY = 'CAD'
-
-const money = new Intl.NumberFormat(LOCALE, {
-  style: 'currency',
-  currency: CURRENCY,
-})
 
 const dayMonth = new Intl.DateTimeFormat(LOCALE, {
   month: 'short',
@@ -16,10 +11,6 @@ const monthYear = new Intl.DateTimeFormat(LOCALE, {
   month: 'long',
   year: 'numeric',
 })
-
-export function formatMoney(amount: number) {
-  return money.format(amount)
-}
 
 /**
  * Parse a YYYY-MM-DD date as a LOCAL date.

@@ -1,4 +1,4 @@
-import { formatMoney } from '../lib/format'
+import { useCurrency } from '../lib/currency'
 import type { Category, Expense } from '../types'
 
 type Props = {
@@ -7,6 +7,7 @@ type Props = {
 }
 
 function CategorySummary({ expenses, categories }: Props) {
+  const { formatMoney } = useCurrency()
   const totals = new Map<string, number>()
   for (const expense of expenses) {
     totals.set(

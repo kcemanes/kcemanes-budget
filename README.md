@@ -2,7 +2,8 @@
 
 A small personal budget tracker: log expenses by category, set a monthly
 budget per category, and see where the month went. Each account only ever
-sees its own data.
+sees its own data. Light/dark theme and the display currency are picked in
+the header and remembered per browser.
 
 Live at **[budget.kcemanes.com](https://budget.kcemanes.com)**.
 
@@ -27,7 +28,10 @@ bundle can only reach the signed-in user's rows.
 | [src/hooks/useSession.ts](src/hooks/useSession.ts) | Current Supabase session, kept in sync with auth changes |
 | [src/lib/supabase.ts](src/lib/supabase.ts) | The single Supabase client; fails loudly if env vars are missing |
 | [src/lib/api.ts](src/lib/api.ts) | All reads and writes for categories and expenses |
-| [src/lib/format.ts](src/lib/format.ts) | Currency, dates, and month range helpers |
+| [src/lib/format.ts](src/lib/format.ts) | Date and month range helpers |
+| [src/lib/theme.ts](src/lib/theme.ts) | Theme choice, storage, and the `data-theme` stamp |
+| [src/lib/currency.ts](src/lib/currency.ts) | The currency list, money formatting, and storage |
+| [src/components/ThemeToggle.tsx](src/components/ThemeToggle.tsx) | The light/dark button, used by both Login and Dashboard |
 | [supabase/schema.sql](supabase/schema.sql) | Tables, indexes, and RLS policies |
 
 A few details worth knowing:
@@ -43,6 +47,45 @@ A few details worth knowing:
   alone would let a crafted request attach another user's category.
 - Amounts come back from `numeric()` as strings once large enough, so
   `listExpenses()` coerces them to numbers.
+
+## Theme and currency
+
+Both are display-only settings held in React context by
+[src/App.tsx](src/App.tsx) and remembered in `localStorage`. They are per
+browser, not per account — nothing about them is stored in Supabase, and
+every read and write is wrapped in `try`/`catch` so a browser with storage
+blocked still renders.
+
+### Dark mode
+
+The palette is two sets of CSS custom properties in
+[src/index.css](src/index.css), swapped by a `data-theme` attribute on
+`<html>`. Tailwind's `dark:` variant is repointed at the same attribute
+(`@custom-variant dark`) so utilities and tokens can never disagree.
+
+The choice is `system`, `light`, or `dark`, defaulting to `system`, which
+follows the OS and keeps following it — `watchSystemTheme()` listens for
+`prefers-color-scheme` changes, so a flip mid-session repaints without a
+reload. The toggle in the header reads the *resolved* theme and offers the
+opposite, so the first click always moves away from what is on screen.
+
+An inline script in [index.html](index.html) stamps `data-theme` before the
+first paint; without it, every load would flash one frame of the light
+palette. It duplicates a little of `theme.ts` on purpose — the storage key
+`budget.theme` and the attribute are shared, **so change both together**.
+
+### Currency
+
+Amounts are stored as plain numbers with no currency attached, so switching
+currency **relabels the existing figures rather than converting them** —
+there are no exchange rates involved. `formatMoney()` comes from context, and
+`Intl.NumberFormat` instances are cached per currency.
+
+To add one, append an entry to `CURRENCIES` in
+[src/lib/currency.ts](src/lib/currency.ts) with its code, the label shown in
+the header picker, and a locale for the number format; the `CurrencyCode`
+type and the picker's options both derive from that array. `DEFAULT_CURRENCY`
+in the same file is what a browser with nothing remembered gets.
 
 ## Setup
 
@@ -99,8 +142,9 @@ Vite's `base` stays `'/'` — see [vite.config.ts](vite.config.ts). Changing
 to a project subpath (`user.github.io/repo/`) would require setting `base`
 to match.
 
-## Changing the currency
+## Changing the date locale
 
-[src/lib/format.ts](src/lib/format.ts) has `LOCALE` and `CURRENCY`
-constants at the top. Editing those two changes every formatted amount and
-date in the app.
+Dates are the one format not chosen at runtime:
+[src/lib/format.ts](src/lib/format.ts) has a single `LOCALE` constant at the
+top, and editing it changes every formatted date in the app. Money is
+independent of it — see [Currency](#currency) above.
