@@ -1,9 +1,13 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
-import './Login.css'
 
 type Mode = 'signin' | 'signup'
+
+const LABEL = 'mt-2 text-sm font-semibold text-ink'
+// The sign-in form is the only full-width surface, so its controls run a
+// step larger than the base .input size.
+const FIELD = 'input text-base px-3 py-2.5'
 
 function Login() {
   const [mode, setMode] = useState<Mode>('signin')
@@ -40,19 +44,27 @@ function Login() {
   }
 
   return (
-    <div className="login">
-      <form className="login-card" onSubmit={handleSubmit}>
-        <h1>{mode === 'signin' ? 'Sign in' : 'Create account'}</h1>
-        <p className="login-sub">
+    <div className="flex flex-1 items-center justify-center bg-linear-to-b from-accent-soft to-ground to-60% px-4 py-8">
+      <form
+        className="flex w-full max-w-[380px] flex-col gap-2 rounded-xl border border-line bg-surface p-8 shadow-card"
+        onSubmit={handleSubmit}
+      >
+        <h1 className="text-center text-[1.6rem]/tight font-semibold text-ink">
+          {mode === 'signin' ? 'Sign in' : 'Create account'}
+        </h1>
+        <p className="mb-4 text-center text-sm text-muted">
           {mode === 'signin'
             ? 'Welcome back to your budget.'
             : 'Start tracking your budget.'}
         </p>
 
-        <label htmlFor="email">Email</label>
+        <label htmlFor="email" className={LABEL}>
+          Email
+        </label>
         <input
           id="email"
           type="email"
+          className={FIELD}
           autoComplete="email"
           required
           value={email}
@@ -60,10 +72,13 @@ function Login() {
           placeholder="you@example.com"
         />
 
-        <label htmlFor="password">Password</label>
+        <label htmlFor="password" className={LABEL}>
+          Password
+        </label>
         <input
           id="password"
           type="password"
+          className={FIELD}
           autoComplete={
             mode === 'signin' ? 'current-password' : 'new-password'
           }
@@ -75,13 +90,19 @@ function Login() {
         />
 
         {error && (
-          <p className="login-msg error" role="alert">
+          <p className="msg msg-error mt-3 text-center" role="alert">
             {error}
           </p>
         )}
-        {notice && <p className="login-msg notice">{notice}</p>}
+        {notice && (
+          <p className="msg msg-notice mt-3 text-center">{notice}</p>
+        )}
 
-        <button type="submit" className="login-submit" disabled={busy}>
+        <button
+          type="submit"
+          className="btn-primary mt-5 px-4 py-2.5 text-base"
+          disabled={busy}
+        >
           {busy
             ? 'Working…'
             : mode === 'signin'
@@ -89,9 +110,13 @@ function Login() {
               : 'Sign up'}
         </button>
 
-        <p className="login-switch">
+        <p className="mt-4 text-center text-sm">
           {mode === 'signin' ? "Don't have an account?" : 'Already have one?'}{' '}
-          <button type="button" onClick={switchMode}>
+          <button
+            type="button"
+            className="btn-link font-semibold text-accent-strong"
+            onClick={switchMode}
+          >
             {mode === 'signin' ? 'Sign up' : 'Sign in'}
           </button>
         </p>

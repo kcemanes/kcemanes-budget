@@ -1,111 +1,126 @@
-:root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+@import 'tailwindcss';
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+/* Palette: cool slate ground, emerald primary, rose/amber for money states.
+   Values marked "derived" are not in the source palette; they exist because
+   the given tones are too light to carry small text.
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+   Where a hue plays two roles, the plain token is the fill (buttons, bars,
+   chips) and the -strong token is the text-safe darkening. Ratios below are
+   against white unless noted; AA wants 4.5:1 for text at these sizes.
 
-  @media (max-width: 1024px) {
-    font-size: 16px;
+   Names follow Tailwind's theme namespaces, so every entry here also
+   generates its utilities: --color-accent gives bg-accent / text-accent /
+   border-accent, --radius-control gives rounded-control, and so on. */
+@theme {
+  --color-ground: #f8fafc; /* slate-50 */
+  --color-surface: #fff;
+  --color-ink: #0f172a; /* slate-900 — 17.9:1 */
+  --color-muted: #64748b; /* slate-500 — 4.76:1, and 4.55:1 on ground */
+
+  --color-line: #e2e8f0; /* derived: slate-200 hairline */
+
+  --color-accent: #059669; /* emerald-600 — fills only, 3.77:1 is under AA */
+  --color-accent-strong: #047857; /* emerald-700 — button hover + accent text, 5.48:1 */
+  --color-accent-mid: #10b981; /* derived: emerald-500, bars and focus edges */
+  --color-accent-soft: #d1fae5; /* derived: emerald-100, tints, rings, row hover */
+
+  /* Money states. The plain tones are for amounts, chips and bars; the
+     -strong pairs are darkened for legibility at body size. */
+  --color-income: #059669; /* emerald-600 */
+  --color-income-strong: #047857; /* derived: emerald-700, 5.48:1 */
+  --color-overspend: #f43f5e; /* rose-500 — 3.67:1, bars and tracks only */
+  --color-overspend-strong: #be123c; /* derived: rose-700, 6.29:1 */
+
+  /* Message surfaces. Each -soft is a translucent tint of its own hue so it
+     composites over both ground and surface. */
+  --color-notice: #f59e0b; /* amber-500 — 2.15:1, never used for text */
+  --color-notice-strong: #92400e; /* derived: amber-800, 6.10:1 on the tint */
+  --color-notice-soft: rgba(245, 158, 11, 0.2);
+  --color-danger: #be123c; /* tracks overspend-strong, 5.38:1 on the tint */
+  --color-danger-soft: rgba(244, 63, 94, 0.12);
+
+  --font-sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+
+  --radius-control: 8px;
+  --shadow-card:
+    rgba(15, 23, 42, 0.08) 0 10px 15px -3px, rgba(15, 23, 42, 0.05) 0 4px 6px -2px;
+}
+
+@layer base {
+  /* All sizing below is rem-based and was authored against an 18px root,
+     so the root size stays as it was. */
+  html {
+    font-size: 18px;
+
+    @media (width <= 1024px) {
+      font-size: 16px;
+    }
+  }
+
+  body {
+    /* Unitless, so it inherits as a ratio and each element scales its own
+       line box. The old `font: 18px/145%` shorthand baked this to a fixed
+       26px that every larger heading then overflowed. */
+    line-height: 1.45;
+    letter-spacing: 0.18px;
+    color: var(--color-muted);
+    background: var(--color-ground);
+    color-scheme: light;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  #root {
+    width: 1126px;
+    max-width: 100%;
+    margin: 0 auto;
+    border-inline: 1px solid var(--color-line);
+    min-height: 100svh;
+    display: flex;
+    flex-direction: column;
   }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
+/* The few control patterns that repeat across screens. Everything else is
+   utilities in the markup. Size and colour here can be overridden from a
+   className without any specificity juggling, because Tailwind emits the
+   utilities layer after this one. */
+@layer components {
+  .input {
+    @apply max-w-full rounded-control border border-line bg-surface px-2.5 py-2 text-sm text-ink;
   }
 
-  #social .button-icon {
-    filter: invert(1) brightness(2);
+  .input:focus {
+    @apply border-accent-mid ring-3 ring-accent-soft outline-none;
   }
-}
 
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-}
-
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
-}
-
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
+  .btn-primary {
+    @apply cursor-pointer rounded-control border border-accent bg-accent px-4 py-2 text-sm font-semibold text-white;
+    @apply enabled:hover:border-accent-strong enabled:hover:bg-accent-strong;
+    @apply disabled:cursor-default disabled:opacity-60;
   }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
+
+  .btn-quiet {
+    @apply cursor-pointer rounded-control border border-line bg-surface px-3 py-1.5 text-sm text-ink;
+    @apply enabled:hover:border-accent-mid enabled:hover:bg-accent-soft disabled:cursor-default;
   }
-}
-p {
-  margin: 0;
-}
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
-}
+  .btn-link {
+    @apply cursor-pointer border-0 bg-transparent p-0 text-sm;
+    @apply enabled:hover:underline disabled:cursor-default;
+  }
 
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+  .msg {
+    @apply rounded-control px-3 py-2 text-sm;
+  }
+
+  .msg-error {
+    @apply bg-danger-soft text-danger;
+  }
+
+  .msg-notice {
+    @apply bg-notice-soft text-notice-strong;
+  }
 }

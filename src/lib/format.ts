@@ -1,0 +1,61 @@
+// Change these two if you budget in another currency or locale.
+const LOCALE = 'en-CA'
+const CURRENCY = 'CAD'
+
+const money = new Intl.NumberFormat(LOCALE, {
+  style: 'currency',
+  currency: CURRENCY,
+})
+
+const dayMonth = new Intl.DateTimeFormat(LOCALE, {
+  month: 'short',
+  day: 'numeric',
+})
+
+const monthYear = new Intl.DateTimeFormat(LOCALE, {
+  month: 'long',
+  year: 'numeric',
+})
+
+export function formatMoney(amount: number) {
+  return money.format(amount)
+}
+
+/**
+ * Parse a YYYY-MM-DD date as a LOCAL date.
+ *
+ * `new Date('2026-09-03')` is parsed as UTC midnight, which renders as the
+ * previous day everywhere west of Greenwich. Building the date from parts
+ * avoids that.
+ */
+export function parseDay(day: string) {
+  const [year, month, date] = day.split('-').map(Number)
+  return new Date(year, month - 1, date)
+}
+
+export function formatDay(day: string) {
+  return dayMonth.format(parseDay(day))
+}
+
+export function formatMonth(year: number, month: number) {
+  return monthYear.format(new Date(year, month, 1))
+}
+
+/** Today in the user's own timezone, as YYYY-MM-DD. */
+export function today() {
+  const now = new Date()
+  return toDay(now.getFullYear(), now.getMonth(), now.getDate())
+}
+
+function toDay(year: number, month: number, date: number) {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${year}-${pad(month + 1)}-${pad(date)}`
+}
+
+/** Inclusive first/last day of a month, for range queries. */
+export function monthBounds(year: number, month: number) {
+  return {
+    from: toDay(year, month, 1),
+    to: toDay(year, month, new Date(year, month + 1, 0).getDate()),
+  }
+}
