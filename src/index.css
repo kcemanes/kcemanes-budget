@@ -159,6 +159,19 @@
     @apply enabled:hover:border-accent-mid enabled:hover:bg-accent-soft disabled:cursor-default;
   }
 
+  /* One of a small set of choices, exactly one selected: the view switcher,
+     the chart range presets. Selection is carried by aria-pressed, so the
+     markup says which is on and the style follows rather than the reverse. */
+  .btn-toggle {
+    @apply cursor-pointer rounded-control border border-line bg-surface px-3 py-1.5 text-sm text-ink;
+    @apply hover:border-accent-mid hover:bg-accent-soft;
+  }
+
+  .btn-toggle[aria-pressed='true'] {
+    @apply border-accent bg-accent text-on-accent;
+    @apply hover:border-accent-strong hover:bg-accent-strong;
+  }
+
   .btn-link {
     @apply cursor-pointer border-0 bg-transparent p-0 text-sm;
     @apply enabled:hover:underline disabled:cursor-default;

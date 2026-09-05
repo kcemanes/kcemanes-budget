@@ -5,6 +5,7 @@ import UpdatePrompt from './components/UpdatePrompt'
 import { useSession } from './hooks/useSession'
 import {
   CurrencyContext,
+  formatMoneyCompactIn,
   formatMoneyIn,
   storeCurrency,
   storedCurrency,
@@ -44,6 +45,8 @@ function App() {
         setCurrency(code)
       },
       formatMoney: (amount: number) => formatMoneyIn(currency, amount),
+      formatMoneyCompact: (amount: number) =>
+        formatMoneyCompactIn(currency, amount),
     }),
     [currency],
   )

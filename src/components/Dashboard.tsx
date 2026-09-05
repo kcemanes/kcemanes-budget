@@ -1,20 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
 import CategorySummary from './CategorySummary'
+import Charts from './Charts'
 import ExpenseForm from './ExpenseForm'
 import ExpenseList from './ExpenseList'
 import InstallButton from './InstallButton'
 import SyncStatus from './SyncStatus'
 import ThemeToggle from './ThemeToggle'
-import { listCategories, listExpenses } from '../lib/api'
 import { signOut } from '../lib/auth'
 import type { Account } from '../lib/auth'
 import { CURRENCIES, useCurrency } from '../lib/currency'
 import type { CurrencyCode } from '../lib/currency'
 import { formatMonth, monthBounds } from '../lib/format'
-import { subscribe } from '../lib/store'
 import { dismissRejected, startSync } from '../lib/sync'
+import { useBudgetData } from '../hooks/useBudgetData'
 import { useSyncState } from '../hooks/useSyncState'
-import type { Category, Expense } from '../types'
 
 const now = new Date()
 
@@ -22,56 +21,30 @@ const now = new Date()
 const STEP =
   'btn-quiet h-9 w-9 rounded-full p-0 text-xl leading-none disabled:opacity-35'
 
+const TABS = [
+  { id: 'month', label: 'Month' },
+  { id: 'charts', label: 'Charts' },
+] as const
+
+type TabId = (typeof TABS)[number]['id']
+
 function Dashboard({ account }: { account: Account }) {
   const { currency, setCurrency, formatMoney } = useCurrency()
+  const [tab, setTab] = useState<TabId>('month')
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth())
-  const [categories, setCategories] = useState<Category[]>([])
-  const [expenses, setExpenses] = useState<Expense[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const sync = useSyncState()
-
-  const [reloadAt, setReloadAt] = useState(0)
 
   const bounds = useMemo(() => monthBounds(year, month), [year, month])
 
   // Push and pull for as long as this account is on screen.
   useEffect(() => startSync(account.id), [account.id])
 
-  // The store changes from underneath: a write from this component, or a sync
-  // landing rows from another device. One subscription re-reads for both.
-  useEffect(() => subscribe(() => setReloadAt((n) => n + 1)), [])
-
-  useEffect(() => {
-    // Guards against a slow response for a month the user already left.
-    let cancelled = false
-
-    async function run() {
-      try {
-        const [cats, rows] = await Promise.all([
-          listCategories(account.id),
-          listExpenses(account.id, bounds.from, bounds.to),
-        ])
-        if (cancelled) return
-        setCategories(cats)
-        setExpenses(rows)
-        setError(null)
-      } catch (err) {
-        if (cancelled) return
-        setError(
-          err instanceof Error ? err.message : 'Could not load your budget.',
-        )
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-
-    void run()
-    return () => {
-      cancelled = true
-    }
-  }, [account.id, bounds, reloadAt])
+  const { categories, expenses, loading, error, setCategories } = useBudgetData(
+    account.id,
+    bounds.from,
+    bounds.to,
+  )
 
   const total = expenses.reduce((sum, expense) => sum + expense.amount, 0)
 
@@ -104,42 +77,8 @@ function Dashboard({ account }: { account: Account }) {
     await signOut()
   }
 
-  return (
-    <div className="mx-auto w-full max-w-[860px] flex-1 px-5 pt-6 pb-16">
-      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-line pb-4">
-        <h1 className="text-2xl font-medium tracking-[-0.4px] text-ink">
-          Budget
-        </h1>
-        <div className="flex flex-wrap items-center gap-3 text-sm">
-          <span className="text-muted">{account.email}</span>
-          <SyncStatus />
-          <label htmlFor="currency" className="sr-only">
-            Currency
-          </label>
-          <select
-            id="currency"
-            className="input py-1.5"
-            value={currency}
-            onChange={(e) => setCurrency(e.target.value as CurrencyCode)}
-          >
-            {CURRENCIES.map(({ code, label }) => (
-              <option key={code} value={code}>
-                {label}
-              </option>
-            ))}
-          </select>
-          <InstallButton />
-          <ThemeToggle />
-          <button
-            type="button"
-            className="btn-quiet"
-            onClick={() => void handleSignOut()}
-          >
-            Sign out
-          </button>
-        </div>
-      </header>
-
+  const monthView = (
+    <>
       <section className="my-6 flex items-center justify-center gap-6">
         <button
           type="button"
@@ -177,28 +116,7 @@ function Dashboard({ account }: { account: Account }) {
         </p>
       )}
 
-      {sync.rejected.length > 0 && (
-        <div className="msg msg-notice my-4" role="alert">
-          <p className="font-semibold">
-            The server refused {sync.rejected.length === 1 ? 'a change' : 'some changes'},
-            so {sync.rejected.length === 1 ? 'it has' : 'they have'} been undone here:
-          </p>
-          <ul className="mt-1.5 list-disc pl-5">
-            {sync.rejected.map((reason) => (
-              <li key={reason}>{reason}</li>
-            ))}
-          </ul>
-          <button
-            type="button"
-            className="btn-link mt-2 font-semibold"
-            onClick={dismissRejected}
-          >
-            Dismiss
-          </button>
-        </div>
-      )}
-
-      {loading || firstEverSync ? (
+      {loading ? (
         <p className="my-8 text-center text-muted">Loading…</p>
       ) : (
         <>
@@ -221,6 +139,94 @@ function Dashboard({ account }: { account: Account }) {
           />
         </>
       )}
+    </>
+  )
+
+  return (
+    <div className="mx-auto w-full max-w-[860px] flex-1 px-5 pt-6 pb-16">
+      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-line pb-4">
+        <h1 className="text-2xl font-medium tracking-[-0.4px] text-ink">
+          Budget
+        </h1>
+        <div className="flex flex-wrap items-center gap-3 text-sm">
+          <span className="text-muted">{account.email}</span>
+          <SyncStatus />
+          <label htmlFor="currency" className="sr-only">
+            Currency
+          </label>
+          <select
+            id="currency"
+            className="input py-1.5"
+            value={currency}
+            onChange={(e) => setCurrency(e.target.value as CurrencyCode)}
+          >
+            {CURRENCIES.map(({ code, label }) => (
+              <option key={code} value={code}>
+                {label}
+              </option>
+            ))}
+          </select>
+          <InstallButton />
+          <ThemeToggle />
+          <button
+            type="button"
+            className="btn-quiet"
+            onClick={() => void handleSignOut()}
+          >
+            Sign out
+          </button>
+        </div>
+      </header>
+
+      {/* Two views over the same account: the month you are working in, and
+          the charts across several of them. */}
+      <div className="mt-5 flex justify-center gap-2">
+        {TABS.map(({ id, label }) => (
+          <button
+            key={id}
+            type="button"
+            className="btn-toggle"
+            aria-pressed={tab === id}
+            aria-controls="view"
+            onClick={() => setTab(id)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {sync.rejected.length > 0 && (
+        <div className="msg msg-notice my-4" role="alert">
+          <p className="font-semibold">
+            The server refused {sync.rejected.length === 1 ? 'a change' : 'some changes'},
+            so {sync.rejected.length === 1 ? 'it has' : 'they have'} been undone here:
+          </p>
+          <ul className="mt-1.5 list-disc pl-5">
+            {sync.rejected.map((reason) => (
+              <li key={reason}>{reason}</li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            className="btn-link mt-2 font-semibold"
+            onClick={dismissRejected}
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      <section id="view" aria-label={tab === 'charts' ? 'Charts' : 'This month'}>
+        {/* An account whose first sync is still running has nothing on this
+            device yet, so neither view has anything true to show. */}
+        {firstEverSync ? (
+          <p className="my-8 text-center text-muted">Loading…</p>
+        ) : tab === 'charts' ? (
+          <Charts userId={account.id} />
+        ) : (
+          monthView
+        )}
+      </section>
     </div>
   )
 }

@@ -37,6 +37,8 @@ Postgres in the background — see [Offline](#offline).
 | [src/App.tsx](src/App.tsx) | Session gate: loading → [Login](src/components/Login.tsx) → [Dashboard](src/components/Dashboard.tsx) |
 | [src/hooks/useSession.ts](src/hooks/useSession.ts) | The signed-in account, resolved so that being offline never looks like being signed out |
 | [src/hooks/useSyncState.ts](src/hooks/useSyncState.ts) | Subscribes the header to the sync engine's status and queue depth |
+| [src/hooks/useBudgetData.ts](src/hooks/useBudgetData.ts) | The categories plus a date range of expenses, re-read whenever the store changes |
+| [src/hooks/useElementWidth.ts](src/hooks/useElementWidth.ts) | The rendered width of an element, so a chart can draw at one unit per pixel |
 | [src/hooks/usePwa.ts](src/hooks/usePwa.ts) | Subscribes to "an update is waiting" and "the browser is offering an install" |
 | [src/lib/supabase.ts](src/lib/supabase.ts) | The single Supabase client; fails loudly if env vars are missing |
 | [src/lib/api.ts](src/lib/api.ts) | All reads and writes for categories and expenses — local, never networked |
@@ -46,6 +48,7 @@ Postgres in the background — see [Offline](#offline).
 | [src/lib/auth.ts](src/lib/auth.ts) | Who is signed in, in a form that survives being offline |
 | [src/lib/pwa.ts](src/lib/pwa.ts) | Service worker registration, update and install prompts |
 | [src/lib/format.ts](src/lib/format.ts) | Date and month range helpers |
+| [src/lib/analytics.ts](src/lib/analytics.ts) | The per-month and per-category aggregations behind the charts |
 | [src/lib/theme.ts](src/lib/theme.ts) | Theme choice, storage, and the `data-theme` stamp |
 | [src/lib/currency.ts](src/lib/currency.ts) | The currency list, money formatting, and storage |
 | [src/components/ThemeToggle.tsx](src/components/ThemeToggle.tsx) | The light/dark button, used by both Login and Dashboard |
@@ -57,9 +60,17 @@ Postgres in the background — see [Offline](#offline).
 
 A few details worth knowing:
 
-- The dashboard is scoped to one month at a time; expenses are fetched for
-  that month's inclusive date range and the stepper can't move past the
-  current month.
+- The dashboard has two views. **Month** is scoped to one month at a time;
+  expenses are fetched for that month's inclusive date range and the stepper
+  can't move past the current month. **Charts** covers the last 3, 6 or 12
+  months ending with the current one, and deliberately ignores the stepper —
+  a trend that stops halfway through history because you were browsing March
+  is a trap rather than a feature.
+- The charts are hand-drawn SVG and CSS rather than a charting library: two
+  figures did not justify the dependency in a bundle that has to precache for
+  offline use. Both are one series in one hue, since spending per month and
+  per category is magnitude rather than identity, and both have a table view
+  underneath so no value is reachable only by hovering.
 - A brand-new account has no categories, so a starter set (Groceries, Rent,
   Transport, Utilities, Dining out, Other) is seeded — but only once a sync
   has confirmed the server side is genuinely empty. Seeding on any empty

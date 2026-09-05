@@ -34,6 +34,31 @@ export function formatMoneyIn(code: CurrencyCode, amount: number) {
   return formatterFor(code).format(amount)
 }
 
+/**
+ * The short form — $1.2K — for places where the full figure does not fit and
+ * precision is not the point: chart axis ticks, mostly.
+ */
+const compact = new Map<CurrencyCode, Intl.NumberFormat>()
+
+function compactFormatterFor(code: CurrencyCode) {
+  let formatter = compact.get(code)
+  if (!formatter) {
+    const { locale } = CURRENCIES.find((c) => c.code === code)!
+    formatter = new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency: code,
+      notation: 'compact',
+      maximumFractionDigits: 1,
+    })
+    compact.set(code, formatter)
+  }
+  return formatter
+}
+
+export function formatMoneyCompactIn(code: CurrencyCode, amount: number) {
+  return compactFormatterFor(code).format(amount)
+}
+
 function isCurrencyCode(value: unknown): value is CurrencyCode {
   return CURRENCIES.some((c) => c.code === value)
 }
@@ -61,6 +86,7 @@ type CurrencySetting = {
   currency: CurrencyCode
   setCurrency: (code: CurrencyCode) => void
   formatMoney: (amount: number) => string
+  formatMoneyCompact: (amount: number) => string
 }
 
 // The default keeps money rendering sanely if a component is used outside the
@@ -69,6 +95,7 @@ export const CurrencyContext = createContext<CurrencySetting>({
   currency: DEFAULT_CURRENCY,
   setCurrency: () => {},
   formatMoney: (amount) => formatMoneyIn(DEFAULT_CURRENCY, amount),
+  formatMoneyCompact: (amount) => formatMoneyCompactIn(DEFAULT_CURRENCY, amount),
 })
 
 export function useCurrency() {

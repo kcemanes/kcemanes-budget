@@ -12,6 +12,19 @@ const monthYear = new Intl.DateTimeFormat(LOCALE, {
   year: 'numeric',
 })
 
+// Axis ticks and range labels, where the full month name never fits.
+const shortMonth = new Intl.DateTimeFormat(LOCALE, { month: 'short' })
+
+const share = new Intl.NumberFormat(LOCALE, {
+  style: 'percent',
+  maximumFractionDigits: 0,
+})
+
+const shortMonthYear = new Intl.DateTimeFormat(LOCALE, {
+  month: 'short',
+  year: 'numeric',
+})
+
 /**
  * Parse a YYYY-MM-DD date as a LOCAL date.
  *
@@ -30,6 +43,19 @@ export function formatDay(day: string) {
 
 export function formatMonth(year: number, month: number) {
   return monthYear.format(new Date(year, month, 1))
+}
+
+export function formatMonthShort(year: number, month: number) {
+  return shortMonth.format(new Date(year, month, 1))
+}
+
+export function formatMonthAbbr(year: number, month: number) {
+  return shortMonthYear.format(new Date(year, month, 1))
+}
+
+/** A 0-1 fraction as a whole percentage. */
+export function formatShare(fraction: number) {
+  return share.format(fraction)
 }
 
 /** Today in the user's own timezone, as YYYY-MM-DD. */
