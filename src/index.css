@@ -148,6 +148,20 @@
     @apply border-accent-mid ring-3 ring-accent-soft outline-none;
   }
 
+  /* iOS Safari zooms the page in when a control it focuses has text under
+     16px, and does not zoom back out when the keyboard closes. The form is
+     authored at text-sm, which lands on 14px once the root drops to 16px on
+     phones, so lift only the touch case to the threshold rather than resize
+     the layout everywhere. Login already sets text-base for the same reason.
+
+     The alternative — maximum-scale=1 on the viewport tag — also stops the
+     zoom, at the cost of pinch-zoom on every screen. */
+  @media (pointer: coarse) {
+    .input {
+      font-size: 16px;
+    }
+  }
+
   .btn-primary {
     @apply cursor-pointer rounded-control border border-accent bg-accent px-4 py-2 text-sm font-semibold text-on-accent;
     @apply enabled:hover:border-accent-strong enabled:hover:bg-accent-strong;
