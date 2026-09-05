@@ -123,11 +123,12 @@ something that has to be merged field by field.
 Passes run on load, on `online`, when the tab becomes visible, after every
 local write, and on a 60-second timer as a backstop for a connection that
 came back without announcing itself. Concurrent requests coalesce: a burst of
-writes settles with one follow-up pass rather than one pass each. There is deliberately no
-Background Sync registration — replaying a write needs the Supabase session
-and its refresh logic, which live on the page, and duplicating those in the
-worker would be a second, subtly different copy of the auth code for a
-trigger only Chromium implements.
+writes settles with one follow-up pass rather than one pass each.
+
+There is deliberately no Background Sync registration — replaying a write
+needs the Supabase session and its refresh logic, which live on the page, and
+duplicating those in the worker would be a second, subtly different copy of
+the auth code for a trigger only Chromium implements.
 
 Pulls page through the results. PostgREST caps a response at 1000 rows and
 says nothing about having done so, which would silently truncate a long
