@@ -5,15 +5,15 @@ import { formatDay } from '../lib/format'
 import type { Category, Expense } from '../types'
 
 type Props = {
+  userId: string
   expenses: Expense[]
   categories: Category[]
-  onChanged: () => void
 }
 
 const TH = 'border-b border-line px-2.5 py-2 text-left text-xs font-semibold uppercase tracking-[0.06em] text-muted'
 const TD = 'border-b border-line px-2.5 py-2.5 text-ink'
 
-function ExpenseList({ expenses, categories, onChanged }: Props) {
+function ExpenseList({ userId, expenses, categories }: Props) {
   const { formatMoney } = useCurrency()
   const [removing, setRemoving] = useState<string | null>(null)
   const names = new Map(categories.map((c) => [c.id, c.name]))
@@ -21,8 +21,7 @@ function ExpenseList({ expenses, categories, onChanged }: Props) {
   async function handleDelete(id: string) {
     setRemoving(id)
     try {
-      await deleteExpense(id)
-      onChanged()
+      await deleteExpense(userId, id)
     } finally {
       setRemoving(null)
     }

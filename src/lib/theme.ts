@@ -30,9 +30,22 @@ export function resolveTheme(choice: ThemeChoice): ResolvedTheme {
   return choice === 'system' ? systemTheme() : choice
 }
 
-/** Hands the resolved theme to CSS. */
+/**
+ * The installed app's title bar takes its colour from a meta tag rather than
+ * from CSS, so it has to be told separately. These mirror --color-ground in
+ * each palette; the pre-paint script in index.html repeats them.
+ */
+const BAR_COLOURS: Record<ResolvedTheme, string> = {
+  light: '#f8fafc',
+  dark: '#0b1220',
+}
+
+/** Hands the resolved theme to CSS, and to the browser chrome around it. */
 export function applyTheme(resolved: ResolvedTheme) {
   document.documentElement.dataset.theme = resolved
+  document
+    .querySelector('meta[name="theme-color"]')
+    ?.setAttribute('content', BAR_COLOURS[resolved])
 }
 
 /** The remembered choice. Storage throws in browsers with cookies blocked. */

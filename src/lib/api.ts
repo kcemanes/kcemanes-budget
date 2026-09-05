@@ -1,88 +1,55 @@
-import { supabase } from './supabase'
+/**
+ * What the components call. Every function here answers from the local
+ * database in ./store and never awaits the network.
+ *
+ * Writes return as soon as IndexedDB has them and kick off a sync in the
+ * background; whether that sync succeeds changes nothing about what the user
+ * sees. This is the whole of the offline-first bargain, and the reason none
+ * of these are allowed to reject on a connection failure.
+ *
+ * The Supabase calls that used to live here are now in ./sync, which is the
+ * only module that talks to the server.
+ */
+import * as store from './store'
+import { requestSync } from './sync'
 import type { Category, Expense } from '../types'
 
-/**
- * Categories every new account starts with, so the expense form is usable
- * before the user has set anything up.
- */
-const STARTER_CATEGORIES = [
-  'Groceries',
-  'Rent',
-  'Transport',
-  'Utilities',
-  'Dining out',
-  'Other',
-]
-
-function unwrap<T>(result: { data: T | null; error: { message: string } | null }) {
-  if (result.error) throw new Error(result.error.message)
-  return result.data as T
+export function listCategories(userId: string): Promise<Category[]> {
+  return store.loadCategories(userId)
 }
 
-export async function listCategories(): Promise<Category[]> {
-  const rows = unwrap(
-    await supabase
-      .from('categories')
-      .select('id, name, monthly_budget')
-      .order('name'),
-  )
-
-  // First run for this account: seed the starters, then re-read.
-  if (rows.length === 0) {
-    unwrap(
-      await supabase
-        .from('categories')
-        .insert(STARTER_CATEGORIES.map((name) => ({ name }))),
-    )
-    return unwrap(
-      await supabase
-        .from('categories')
-        .select('id, name, monthly_budget')
-        .order('name'),
-    )
-  }
-
-  return rows
+export function listExpenses(
+  userId: string,
+  from: string,
+  to: string,
+): Promise<Expense[]> {
+  return store.loadExpenses(userId, from, to)
 }
 
 export async function createCategory(
+  userId: string,
   name: string,
   monthlyBudget: number | null,
 ): Promise<Category> {
-  const rows = unwrap(
-    await supabase
-      .from('categories')
-      .insert({ name: name.trim(), monthly_budget: monthlyBudget })
-      .select('id, name, monthly_budget'),
-  )
-  return rows[0]
+  const category = await store.addCategory(userId, name, monthlyBudget)
+  void requestSync(userId)
+  return category
 }
 
-export async function listExpenses(from: string, to: string): Promise<Expense[]> {
-  const rows = unwrap(
-    await supabase
-      .from('expenses')
-      .select('id, category_id, spent_on, amount, note')
-      .gte('spent_on', from)
-      .lte('spent_on', to)
-      .order('spent_on', { ascending: false })
-      .order('created_at', { ascending: false }),
-  )
-
-  // numeric() can come back as a string once values get large enough.
-  return rows.map((row) => ({ ...row, amount: Number(row.amount) }))
+export async function createExpense(
+  userId: string,
+  input: {
+    category_id: string
+    spent_on: string
+    amount: number
+    note: string | null
+  },
+): Promise<void> {
+  await store.addExpense(userId, input)
+  void requestSync(userId)
 }
 
-export async function createExpense(input: {
-  category_id: string
-  spent_on: string
-  amount: number
-  note: string | null
-}): Promise<void> {
-  unwrap(await supabase.from('expenses').insert(input).select('id'))
-}
-
-export async function deleteExpense(id: string): Promise<void> {
-  const { error } = await supabase.from('expenses').delete().eq('id', id)
-  if (error) throw new Error(error.message)
+export async function deleteExpense(userId: string, id: string): Promise<void> {
+  await store.removeExpense(userId, id)
+  void requestSync(userId)
 }

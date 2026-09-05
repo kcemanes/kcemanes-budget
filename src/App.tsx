@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Dashboard from './components/Dashboard'
 import Login from './components/Login'
+import UpdatePrompt from './components/UpdatePrompt'
 import { useSession } from './hooks/useSession'
 import {
   CurrencyContext,
@@ -20,7 +21,7 @@ import {
 import type { ThemeChoice } from './lib/theme'
 
 function App() {
-  const { session, loading } = useSession()
+  const { account, loading } = useSession()
   const [currency, setCurrency] = useState(storedCurrency)
   const [theme, setTheme] = useState(storedTheme)
   const [system, setSystem] = useState(systemTheme)
@@ -70,11 +71,12 @@ function App() {
           <div className="flex flex-1 items-center justify-center p-8 text-center">
             Loading…
           </div>
-        ) : session ? (
-          <Dashboard session={session} />
+        ) : account ? (
+          <Dashboard account={account} />
         ) : (
           <Login />
         )}
+        <UpdatePrompt />
       </CurrencyContext.Provider>
     </ThemeContext.Provider>
   )

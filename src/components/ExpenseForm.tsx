@@ -5,8 +5,9 @@ import { today } from '../lib/format'
 import type { Category } from '../types'
 
 type Props = {
+  userId: string
   categories: Category[]
-  onAdded: () => void
+  /** Lets the picker show a category the moment it is created. */
   onCategoryAdded: (category: Category) => void
 }
 
@@ -16,7 +17,7 @@ const NEW_CATEGORY = '__new__'
 const FIELD = 'flex flex-col gap-1 max-sm:min-w-0 max-sm:basis-full'
 const LABEL = 'text-xs font-semibold text-ink'
 
-function ExpenseForm({ categories, onAdded, onCategoryAdded }: Props) {
+function ExpenseForm({ userId, categories, onCategoryAdded }: Props) {
   const [spentOn, setSpentOn] = useState(today())
   const [categoryId, setCategoryId] = useState(categories[0]?.id ?? '')
   const [newCategory, setNewCategory] = useState('')
@@ -42,12 +43,12 @@ function ExpenseForm({ categories, onAdded, onCategoryAdded }: Props) {
       let targetId = categoryId
 
       if (addingCategory) {
-        const created = await createCategory(newCategory, null)
+        const created = await createCategory(userId, newCategory, null)
         onCategoryAdded(created)
         targetId = created.id
       }
 
-      await createExpense({
+      await createExpense(userId, {
         category_id: targetId,
         spent_on: spentOn,
         // Guard against float drift from inputs like 19.99 + 0.1.
@@ -59,8 +60,9 @@ function ExpenseForm({ categories, onAdded, onCategoryAdded }: Props) {
       setNote('')
       setNewCategory('')
       setCategoryId(targetId)
-      onAdded()
     } catch (err) {
+      // Reaching here means the local write failed, not the network — the
+      // expense is saved and queued before this promise resolves.
       setError(err instanceof Error ? err.message : 'Could not save the expense.')
     } finally {
       setBusy(false)

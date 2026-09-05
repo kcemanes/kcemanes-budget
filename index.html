@@ -3,13 +3,31 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Log expenses by category, set a monthly budget, and see where the month went — online or off."
+    />
+
+    <!-- Tints the title bar when the app runs installed. Kept in step with
+         the palette by applyTheme() in src/lib/theme.ts, and stamped below
+         for the first paint. -->
+    <meta name="theme-color" content="#f8fafc" />
+
+    <!-- iOS installs from Safari's Share menu and ignores the manifest for
+         these three. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Budget" />
+
     <title>Budget</title>
     <script>
       // Stamps the theme before the first paint. Doing this from a React
       // effect instead would show one frame of the light palette on every
       // load. Mirrors storedTheme()/resolveTheme() in src/lib/theme.ts —
-      // the storage key and the attribute are shared, so change both together.
+      // the storage key, the attribute, and the two theme-colour values are
+      // shared, so change both together.
       ;(function () {
         try {
           var saved = localStorage.getItem('budget.theme')
@@ -19,6 +37,9 @@
             (choice === 'system' &&
               matchMedia('(prefers-color-scheme: dark)').matches)
           document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+
+          var meta = document.querySelector('meta[name="theme-color"]')
+          if (meta) meta.setAttribute('content', dark ? '#0b1220' : '#f8fafc')
         } catch (e) {
           // Storage blocked. The light palette in CSS stands, and the app
           // still re-applies the theme once React mounts.

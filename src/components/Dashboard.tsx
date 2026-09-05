@@ -1,14 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { Session } from '@supabase/supabase-js'
 import CategorySummary from './CategorySummary'
 import ExpenseForm from './ExpenseForm'
 import ExpenseList from './ExpenseList'
+import InstallButton from './InstallButton'
+import SyncStatus from './SyncStatus'
 import ThemeToggle from './ThemeToggle'
 import { listCategories, listExpenses } from '../lib/api'
+import { signOut } from '../lib/auth'
+import type { Account } from '../lib/auth'
 import { CURRENCIES, useCurrency } from '../lib/currency'
 import type { CurrencyCode } from '../lib/currency'
 import { formatMonth, monthBounds } from '../lib/format'
-import { supabase } from '../lib/supabase'
+import { subscribe } from '../lib/store'
+import { dismissRejected, startSync } from '../lib/sync'
+import { useSyncState } from '../hooks/useSyncState'
 import type { Category, Expense } from '../types'
 
 const now = new Date()
@@ -17,7 +22,7 @@ const now = new Date()
 const STEP =
   'btn-quiet h-9 w-9 rounded-full p-0 text-xl leading-none disabled:opacity-35'
 
-function Dashboard({ session }: { session: Session }) {
+function Dashboard({ account }: { account: Account }) {
   const { currency, setCurrency, formatMoney } = useCurrency()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth())
@@ -25,13 +30,18 @@ function Dashboard({ session }: { session: Session }) {
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const sync = useSyncState()
 
   const [reloadAt, setReloadAt] = useState(0)
 
   const bounds = useMemo(() => monthBounds(year, month), [year, month])
 
-  // Children call this after a write; bumping the counter re-runs the effect.
-  const reload = () => setReloadAt((n) => n + 1)
+  // Push and pull for as long as this account is on screen.
+  useEffect(() => startSync(account.id), [account.id])
+
+  // The store changes from underneath: a write from this component, or a sync
+  // landing rows from another device. One subscription re-reads for both.
+  useEffect(() => subscribe(() => setReloadAt((n) => n + 1)), [])
 
   useEffect(() => {
     // Guards against a slow response for a month the user already left.
@@ -40,8 +50,8 @@ function Dashboard({ session }: { session: Session }) {
     async function run() {
       try {
         const [cats, rows] = await Promise.all([
-          listCategories(),
-          listExpenses(bounds.from, bounds.to),
+          listCategories(account.id),
+          listExpenses(account.id, bounds.from, bounds.to),
         ])
         if (cancelled) return
         setCategories(cats)
@@ -61,7 +71,7 @@ function Dashboard({ session }: { session: Session }) {
     return () => {
       cancelled = true
     }
-  }, [bounds, reloadAt])
+  }, [account.id, bounds, reloadAt])
 
   const total = expenses.reduce((sum, expense) => sum + expense.amount, 0)
 
@@ -71,8 +81,28 @@ function Dashboard({ session }: { session: Session }) {
     setMonth(shifted.getMonth())
   }
 
-  const isCurrentMonth =
-    year === now.getFullYear() && month === now.getMonth()
+  const isCurrentMonth = year === now.getFullYear() && month === now.getMonth()
+
+  // Reads are local and quick, so the spinner is really only for the very
+  // first launch of an account, where there is nothing on this device yet and
+  // the opening sync is what will produce it.
+  const firstEverSync =
+    sync.lastSyncedAt === null &&
+    sync.status === 'syncing' &&
+    categories.length === 0
+
+  async function handleSignOut() {
+    if (
+      sync.pending > 0 &&
+      !window.confirm(
+        `${sync.pending} change${sync.pending === 1 ? '' : 's'} on this device ` +
+          'have not reached the server yet. Signing out erases them. Sign out anyway?',
+      )
+    ) {
+      return
+    }
+    await signOut()
+  }
 
   return (
     <div className="mx-auto w-full max-w-[860px] flex-1 px-5 pt-6 pb-16">
@@ -80,8 +110,9 @@ function Dashboard({ session }: { session: Session }) {
         <h1 className="text-2xl font-medium tracking-[-0.4px] text-ink">
           Budget
         </h1>
-        <div className="flex items-center gap-3 text-sm">
-          <span className="text-muted">{session.user.email}</span>
+        <div className="flex flex-wrap items-center gap-3 text-sm">
+          <span className="text-muted">{account.email}</span>
+          <SyncStatus />
           <label htmlFor="currency" className="sr-only">
             Currency
           </label>
@@ -97,11 +128,12 @@ function Dashboard({ session }: { session: Session }) {
               </option>
             ))}
           </select>
+          <InstallButton />
           <ThemeToggle />
           <button
             type="button"
             className="btn-quiet"
-            onClick={() => supabase.auth.signOut()}
+            onClick={() => void handleSignOut()}
           >
             Sign out
           </button>
@@ -145,13 +177,34 @@ function Dashboard({ session }: { session: Session }) {
         </p>
       )}
 
-      {loading ? (
+      {sync.rejected.length > 0 && (
+        <div className="msg msg-notice my-4" role="alert">
+          <p className="font-semibold">
+            The server refused {sync.rejected.length === 1 ? 'a change' : 'some changes'},
+            so {sync.rejected.length === 1 ? 'it has' : 'they have'} been undone here:
+          </p>
+          <ul className="mt-1.5 list-disc pl-5">
+            {sync.rejected.map((reason) => (
+              <li key={reason}>{reason}</li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            className="btn-link mt-2 font-semibold"
+            onClick={dismissRejected}
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {loading || firstEverSync ? (
         <p className="my-8 text-center text-muted">Loading…</p>
       ) : (
         <>
           <ExpenseForm
+            userId={account.id}
             categories={categories}
-            onAdded={reload}
             onCategoryAdded={(category) =>
               setCategories((current) =>
                 [...current, category].sort((a, b) =>
@@ -162,9 +215,9 @@ function Dashboard({ session }: { session: Session }) {
           />
           <CategorySummary expenses={expenses} categories={categories} />
           <ExpenseList
+            userId={account.id}
             expenses={expenses}
             categories={categories}
-            onChanged={reload}
           />
         </>
       )}
